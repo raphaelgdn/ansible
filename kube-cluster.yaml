@@ -26,6 +26,6 @@
    - name: Editando arquivo /etc/hosts
      shell:
        cmd:  |
-         echo "192.168.0.211 dk-node-01.rgdn.com.br
-192.168.0.212 dk-node-02.rgdn.com.br
-192.168.0.213 dk-node-03.rgdn.com.br" >> /etc/hosts
+         echo "192.168.0.211 dk-node-01.com.br
+192.168.0.212 dk-node-02.com.br
+192.168.0.213 dk-node-03.com.br" >> /etc/hosts
