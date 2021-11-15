@@ -4,7 +4,7 @@
   become: true
   vars:
     user: "ansible"
-    password: "1"
+    password: "password"
     group: "wheel"
 
   tasks:
