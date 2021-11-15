@@ -1,17 +1,35 @@
 ---
 - hosts: kube-cluster 
-  become: true 
-  become_user: ansible
+  become: yes 
   tasks:
     - name: Atualizando pacotes
       yum:
         name: '*'
         state: latest
     
-    - name: criando diretórios 
-      shell:
-        cmd:  |
-          mkdir -p /opt/{nfs,dados/mysql,storage/default,storage/local}
+    - name: criando diretórios
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "1777"
+        state: directory
+      loop:
+        - /kube/nfs
+        - /kube/dados
+        - /kube/dados/mysql
+        - /kube/storage
+        - /kube/storage/default
+        - /kube/storage/local
+
+    - name: Adicionando Entrada dos Hosts em /etc/hosts
+      blockinfile:
+        path: /etc/hosts
+        block: |
+          {{ item.ip }} {{ item.name }}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+      loop:
+        - { name: dk-node-01.rgdn.com.br, ip: 192.168.0.211 }
+        - { name: dk-node-02.rgdn.com.br, ip: 192.168.0.212 }
+        - { name: dk-node-03.rgdn.com.br, ip: 192.168.0.213 }
 
     - name: instalando pacotes ( wget | nfs-utils | epel )
       yum:
@@ -23,9 +41,3 @@
           name: nfs-utils
           state: started
           enabled: true
-   - name: Editando arquivo /etc/hosts
-     shell:
-       cmd:  |
-         echo "192.168.0.211 dk-node-01.rgdn.com.br
-192.168.0.212 dk-node-02.rgdn.com.br
-192.168.0.213 dk-node-03.rgdn.com.br" >> /etc/hosts

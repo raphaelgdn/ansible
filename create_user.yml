@@ -3,14 +3,21 @@
   hosts: kube-cluster
   become: true
   vars:
-    user: "ansible"
-    password: "1"
-    group: "wheel"
+    usr: "ansible"
+    pwd: "1"
 
   tasks:
-    - name: change password
-      ansible.builtin.user:
-        name: "{{ user }}"
-        group: "{{ group }}"
+    - name: Criando Grupo
+      ansible.builtin.group:
+        name: "{{ usr }}"
         state: present
-        password: "{{ password | password_hash('sha512') }}"
+
+    - name: Criando Usuário
+      ansible.builtin.user:
+        name: "{{ usr }}"
+        comment: "User Automation"
+        group: "{{ usr }}"
+        groups: wheel,docker
+        state: present
+        append: yes
+        password: "{{ pwd | password_hash('sha512') }}"

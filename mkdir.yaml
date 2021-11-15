@@ -1,0 +1,17 @@
+---
+- hosts: kube-cluster
+  become: true
+  tasks:
+    - name: criando diretórios
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "1777"
+        state: directory
+      loop:
+        - /kube/nfs
+        - /kube/dados
+        - /kube/dados/mysql
+        - /kube/storage
+        - /kube/storage/default
+        - /kube/storage/local
+      
