@@ -41,3 +41,12 @@
           name: nfs-utils
           state: started
           enabled: true
+<<<<<<< HEAD
+=======
+   - name: Editando arquivo /etc/hosts
+     shell:
+       cmd:  |
+         echo "192.168.0.211 dk-node-01.com.br
+192.168.0.212 dk-node-02.com.br
+192.168.0.213 dk-node-03.com.br" >> /etc/hosts
+>>>>>>> c334ce2b13d2c8c57324206f82b4c89027de258e
