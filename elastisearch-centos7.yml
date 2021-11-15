@@ -1,0 +1,88 @@
+---
+- hosts: e
+  become: yes
+  become_user: root
+  tasks:
+
+    - name: Atualizando /etc/hosts
+      shell: |
+          echo "192.168.122.31 e1.rgdn.com.br
+          192.168.122.32 e2.rgdn.com.br
+          192.168.122.33 l1.rgdn.com.br
+          192.168.122.34 l2.rgdn.com.br
+          192.168.122.35 k.rgdn.com.br
+          192.168.122.40 s.rgdn.com.br" >>/etc/hosts
+
+    - name: Criando Repositório Elasticsearch 7.x
+      shell: |
+          cat <<EOF | tee /etc/yum.repos.d/elasticsearch.repo
+          [elasticsearch-7.x]
+          name=Elasticsearch repository for 7.x packages
+          baseurl=https://artifacts.elastic.co/packages/7.x/yum
+          gpgcheck=1
+          gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+          enabled=1
+          autorefresh=1
+          type=rpm-md
+          EOF
+
+    - name: Importando chave GPG
+      shell: |
+        rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+
+    - name: instalando dependêcias ( Java | rsync | epel )
+      yum:
+          name: ['java-1.8.0-openjdk', 'rsync', 'epel-release']
+          state: present
+
+    - name: instalando Elasticsearch
+      yum:
+        name: elasticsearch
+        state: present
+
+    - name: Adicionando regra no Firewall
+      firewalld:
+        zone: public
+        service: elasticsearch
+        state: enabled
+        permanent: yes
+        
+    - name: Atualizando as configurações do serviço Elasticsearch
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: '#network.host: ', To: 'network.host: 0.0.0.0'}
+        - { From: '# cluster.name: ', To: 'cluster.name: elastic-cluster'}
+        - { From: '# node.name: ', To: 'node.name: {{ ansible_hostname }}.rgdn.com.br'}
+        - { From: '# cluster.initial_master_nodes: ', To: 'cluster.initial_master_nodes: ["e1.rgdn.com.br", "e2.rgdn.com.br"]'}
+        - { From: '# discovery.seed_hosts: ', To: 'discovery.seed_hosts: ["e1.rgdn.com.br", "e2.rgdn.com.br"]'}
+
+    - name: Iniciando Serviço Elasticsearch
+      service:
+          name: elasticsearch
+          state: started
+          enabled: true
+
+    - name: Verificando porta 9200 aberta
+      shell: |
+          ss -na | grep 9200
+    
+- name: Testando conexão com o Cluster Elasticsearch 
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Conetado ao serviço Elasticsearch
+      uri:
+        url: "{{ item }}"
+        with_items:
+        - curl -X GET http://e1.rgdn.com.br:9200
+        - curl -X GET http://e2.rgdn.com.br:9200

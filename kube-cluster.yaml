@@ -1,0 +1,31 @@
+---
+- hosts: kube-cluster 
+  become: true 
+  become_user: ansible
+  tasks:
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+    
+    - name: criando diretórios 
+      shell:
+        cmd:  |
+          mkdir -p /opt/{nfs,dados/mysql,storage/default,storage/local}
+
+    - name: instalando pacotes ( wget | nfs-utils | epel )
+      yum:
+          name: ['wget', 'nfs-utils', 'epel-release']
+          state: present
+             
+    - name: Iniciando Serviço NFS
+      service:
+          name: nfs-utils
+          state: started
+          enabled: true
+   - name: Editando arquivo /etc/hosts
+     shell:
+       cmd:  |
+         echo "192.168.0.211 dk-node-01.rgdn.com.br
+192.168.0.212 dk-node-02.rgdn.com.br
+192.168.0.213 dk-node-03.rgdn.com.br" >> /etc/hosts

@@ -1,0 +1,288 @@
+---
+- hosts: elk
+  become: yes
+  become_user: root
+  tasks:
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+    - name: Criando Serviço Kibana no Firewall
+      shell:
+        cmd:  |
+          cat <<EOF | tee /etc/firewalld/services/kibana.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <service>
+          <short>kibana</short>
+          <description>Kibana Listener Service</description>
+          <port protocol="tcp" port="5601" />
+          </service>
+          EOF
+
+    - name: Criando Serviço Logstash no Firewall
+      shell:
+        cmd:  |
+          cat <<EOF | tee /etc/firewalld/services/logstash.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <service>
+          <short>logstash</short>
+          <description>logstash Listener Service</description>
+          <port protocol="tcp" port="5044" />
+          <port protocol="udp" port="5044" />
+          </service>
+          EOF
+    
+    - name: Adicionando regra no Firewall
+      firewalld:
+        zone: public
+        service: "{{ item }}"
+        state: enabled
+        permanent: yes
+      loop:
+        - http
+        - https
+        - elasticsearch
+        - kibana
+        - logstash
+
+    - name: instalando dependêcias ( Java | rsync | epel )
+      yum:
+          name: ['java-1.8.0-openjdk-devel', 'java-1.8.0-openjdk', 'rsync', 'epel-release']
+          state: present
+     
+    - name: Criando Repositório Elasticsearch 7.x
+      shell: 
+        cmd: |
+          cat <<EOF | tee /etc/yum.repos.d/elasticsearch.repo
+          [elasticsearch-7.x]
+          name=Elasticsearch repository for 7.x packages
+          baseurl=https://artifacts.elastic.co/packages/7.x/yum
+          gpgcheck=1
+          gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+          enabled=1
+          autorefresh=1
+          type=rpm-md
+          EOF
+
+    - name: Importando chave GPG
+      shell: |
+        rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: instalando Elasticsearch
+      yum:
+        name: elasticsearch
+        state: present
+
+    - name: Atualizando as configurações do serviço Elasticsearch
+      lineinfile:
+        path: /etc/elasticsearch/elasticsearch.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: 'network.host: ', To: 'network.host: localhost'}
+
+    - name: Iniciando Serviço Elasticsearch
+      service:
+          name: elasticsearch
+          state: started
+          enabled: true
+
+    - name: Instalando Kibana
+      yum:
+        name: kibana
+        state: present
+              
+    - name: Atualizando as configurações do serviço Kibana ( Host | Name | URL | Username | Password )
+      lineinfile:
+        path: /etc/kibana/kibana.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: 'server.host: ', To: 'server.host: "0.0.0.0"'}
+        - { From: 'server.name: ', To: 'server.name: "kibana.rgdn.com.br"'}
+        - { From: '#elasticsearch.hosts: ["http://localhost:9200"] ', To: 'elasticsearch.hosts: ["http://localhost:9200"]'}
+        - { From: '#elasticsearch.username: ', To: 'elasticsearch.username: "admin"'}
+        - { From: '#elasticsearch.password: ', To: 'elasticsearch.password: "$;sR*KX8$rsI"'}
+
+    - name: Iniciando Serviço Kibana
+      service:
+          name: kibana
+          state: started
+          enabled: true
+
+    #- name: Criano usuário Kibanaadmin
+    #  shell: 
+    #    cmd:  |
+    #      echo "kibanaadmin:`openssl passwd -apr1`" | tee -a /etc/nginx/htpasswd.users
+    - name: Instalando NGINX
+      yum:
+        name: nginx
+        state: present
+
+    - name: Criando arquivo de Virtual Host kibana.rgdn.com.br (NGINX)
+      shell:
+        cmd: |
+          cat <<EOF | tee /etc/nginx/conf.d/kibana.rgdn.com.br.conf
+            server {
+              listen 80;
+
+              server_name kibana.rgdn.com.br www.kibana.rgdn.com.br;
+
+              location / {
+              proxy_pass http://localhost:5601;
+              proxy_http_version 1.1;
+              #proxy_set_header Upgrade $http_upgrade;
+              #proxy_set_header Connection 'upgrade';
+              #proxy_set_header Host $host;
+              #proxy_cache_bypass $http_upgrade;
+                }
+              }
+          EOF
+
+    - name: instalando Logstash
+      yum:
+        name: logstash
+        state: present
+
+    - name: Criando arquivo de configuração Logstash
+      shell: 
+        cmd:  |
+          cat <<EOF | tee /etc/logstash/conf.d/02-beats-input.conf
+          input {
+            beats {
+            port => 5044
+            }
+          }
+          EOF
+
+    - name: Criando arquivo de configuração de Filtro do Logstash
+      shell: 
+        cmd:  |
+          cat <<EOF | tee /etc/logstash/conf.d/10-syslog-filter.conf
+          filter {
+            if [fileset][module] == "system" {
+              if [fileset][name] == "auth" {
+                grok {
+                  match => { "message" => ["%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: %{DATA:[system][auth][ssh][event]} %{DATA:[system][auth][ssh][method]} for (invalid user )?%{DATA:[system][auth][user]} from %{IPORHOST:[system][auth][ssh][ip]} port %{NUMBER:[system][auth][ssh][port]} ssh2(: %{GREEDYDATA:[system][auth][ssh][signature]})?",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: %{DATA:[system][auth][ssh][event]} user %{DATA:[system][auth][user]} from %{IPORHOST:[system][auth][ssh][ip]}",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sshd(?:\[%{POSINT:[system][auth][pid]}\])?: Did not receive identification string from %{IPORHOST:[system][auth][ssh][dropped_ip]}",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} sudo(?:\[%{POSINT:[system][auth][pid]}\])?: \s*%{DATA:[system][auth][user]} :( %{DATA:[system][auth][sudo][error]} ;)? TTY=%{DATA:[system][auth][sudo][tty]} ; PWD=%{DATA:[system][auth][sudo][pwd]} ; USER=%{DATA:[system][auth][sudo][user]} ; COMMAND=%{GREEDYDATA:[system][auth][sudo][command]}",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} groupadd(?:\[%{POSINT:[system][auth][pid]}\])?: new group: name=%{DATA:system.auth.groupadd.name}, GID=%{NUMBER:system.auth.groupadd.gid}",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} useradd(?:\[%{POSINT:[system][auth][pid]}\])?: new user: name=%{DATA:[system][auth][user][add][name]}, UID=%{NUMBER:[system][auth][user][add][uid]}, GID=%{NUMBER:[system][auth][user][add][gid]}, home=%{DATA:[system][auth][user][add][home]}, shell=%{DATA:[system][auth][user][add][shell]}$",
+                            "%{SYSLOGTIMESTAMP:[system][auth][timestamp]} %{SYSLOGHOST:[system][auth][hostname]} %{DATA:[system][auth][program]}(?:\[%{POSINT:[system][auth][pid]}\])?: %{GREEDYMULTILINE:[system][auth][message]}"] }
+                  pattern_definitions => {
+                    "GREEDYMULTILINE"=> "(.|\n)*"
+                  }
+                  remove_field => "message"
+                }
+                date {
+                  match => [ "[system][auth][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+                }
+                geoip {
+                  source => "[system][auth][ssh][ip]"
+                  target => "[system][auth][ssh][geoip]"
+                }
+              }
+              else if [fileset][name] == "syslog" {
+                grok {
+                  match => { "message" => ["%{SYSLOGTIMESTAMP:[system][syslog][timestamp]} %{SYSLOGHOST:[system][syslog][hostname]} %{DATA:[system][syslog][program]}(?:\[%{POSINT:[system][syslog][pid]}\])?: %{GREEDYMULTILINE:[system][syslog][message]}"] }
+                  pattern_definitions => { "GREEDYMULTILINE" => "(.|\n)*" }
+                  remove_field => "message"
+                }
+                date {
+                  match => [ "[system][syslog][timestamp]", "MMM  d HH:mm:ss", "MMM dd HH:mm:ss" ]
+                }
+              }
+            }
+          }
+          EOF
+
+    - name: Criando arquivo de configuração de encaminhamento de LOGS
+      shell: 
+        cmd:  |
+          cat <<EOF | tee /etc/logstash/conf.d/30-elasticsearch-output.conf
+          output {
+            elasticsearch {
+              hosts => ["localhost:9200"]
+              manage_template => false
+              index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+            }
+          }
+          EOF
+
+    - name: Iniciando LOGSTASH
+      service:
+          name: logstash
+          state: started
+          enabled: true
+
+    - name: Instalando filebeat
+      yum:
+        name: filebeat
+        state: present
+
+    - name: Atualizando as configurações do serviço Filebeat ( Host )
+      lineinfile:
+        path: /etc/filebeat/filebeat.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: 'output.elasticsearch:', To: '#output.elasticsearch:'}
+        - { From: 'hosts: ["localhost:9200"]', To: '#hosts: ["localhost:9200"]'}
+        - { From: '#output.logstash:', To: 'output.logstash:'}
+        - { From: '#hosts: ["localhost:5044"]', To: 'hosts: ["localhost:5044"]'}
+
+    - name: Configurando Habilitando modulos Filebeat
+      command: filebeat modules enable system
+
+    - name: Filebeat arregando Template Elasticsearch index 
+      command: filebeat setup --template -E output.logstash.enabled=false -E 'output.elasticsearch.hosts=["localhost:9200"]'
+          
+    - name: Iniciando Filebeat
+      service:
+          name: filebeat
+          state: started
+          enabled: true
+
+    - name: Iniciando NGINX
+      service:
+          name: nginx
+          state: started
+          enabled: true
+        
+    - name: Configurando SELinux
+      command: setsebool httpd_can_network_connect 1 -P 
+    
+    - name: Conetado ao serviço Elasticsearch
+      uri:
+        url: curl -X GET http://localhost:9200
+        return_content: yes
+        status_code: 200
+        
+    - name: Criando teste index
+      uri:
+        url: curl -X PUT "http://localhost:9200/mytest_index"
+        return_content: yes
+        status_code: 200
+
+    - name: Criando teste index
+      uri:
+        url: curl -X GET 'http://localhost:9200/filebeat-*/_search?pretty'
+        return_content: yes
+        status_code: 200
+
+- name: Testando conexão com serviços Elasticsearch e Kibana
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Conectando ao serviço Kibana
+      uri:
+        url: curl http://kibana.rgdn.com.br/status
+        return_content: yes
+        status_code: 200

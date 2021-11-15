@@ -1,0 +1,106 @@
+---
+- hosts: k
+  become: yes
+  become_user: root
+  tasks:
+
+    - name: Atualizando /etc/hosts
+      shell: |
+          echo "192.168.122.31 e1.rgdn.com.br
+          192.168.122.32 e2.rgdn.com.br
+          192.168.122.33 l1.rgdn.com.br
+          192.168.122.34 l2.rgdn.com.br
+          192.168.122.35 k.rgdn.com.br
+          192.168.122.40 s.rgdn.com.br" >>/etc/hosts
+
+    - name: Criando Repositório Elasticsearch 7.x
+      shell: |
+        cat <<EOF | tee /etc/yum.repos.d/elasticsearch.repo
+        [elasticsearch-7.x]
+        name=Elasticsearch repository for 7.x packages
+        baseurl=https://artifacts.elastic.co/packages/7.x/yum
+        gpgcheck=1
+        gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+        enabled=1
+        autorefresh=1
+        type=rpm-md
+        EOF
+
+    - name: Importando chave GPG
+      shell: |
+        rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: Criando Service Firewalld Kibana 
+      shell: |      
+        cat <<EOF | tee /etc/firewalld/services/kibana.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <service>
+        <short>kibana</short>
+        <description>Kibana Listener Service</description>
+        <port protocol="tcp" port="5601" />
+        </service>
+        EOF
+
+    - name: FirewallD rules
+      firewalld:
+        zone: public
+        permanent: yes
+        service: kibana
+        state: enabled
+
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+
+    - name: instalando dependêcias ( Java | rsync | epel )
+      yum:
+          name: ['java-1.8.0-openjdk', 'rsync', 'epel-release']
+          state: present
+
+    - name: Instalando Kibana
+      yum:
+        name: kibana
+        state: present
+    
+    - name: Atualizando as configurações do serviço Kibana
+      lineinfile:
+        path: /etc/kibana/kibana.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: '#server.host: "localhost" ', To: 'server.host: "0.0.0.0"'}
+        - { From: '#server.name: ', To: 'server.name: "k.rgdn.com.br"'}
+        - { From: '#elasticsearch.hosts: ', To: 'elasticsearch.hosts: ["http://e1.rgdn.com.br:9200", "http://e2.rgdn.com.br:9200"]'}
+
+       #- { From: '#elasticsearch.username: ', To: 'elasticsearch.username: "admin"'}
+       #- { From: '#elasticsearch.password: ', To: 'elasticsearch.password: "$;sR*KX8$rsI"'}
+       #- { From: '#server.ssl.enabled: ', To: 'server.ssl.enabled: true'}
+       #- { From: '#server.ssl.certificate: ', To: 'server.ssl.certificate: /etc/pki/tls/certs/rgdn.com.br.crt.pem'}
+       #- { From: '#server.ssl.key: ', To: 'server.ssl.key: /etc/pki/tls/private/rgdn.com.br.key.pem'}
+    
+    #- name: Instalando Certificado Digital 
+    #  copy:
+    #      src: "{{ cert_file[0] }}"
+    #      dest: "{{ cert_dir[0] }}"
+    #
+    #- name: Instalando Certificado Digital
+    #  copy:
+    #      src: "{{ cert_file[1] }}"
+    #      dest: "{{ cert_dir[1] }}"
+
+    - name: Iniciando Serviço Kibana
+      service:
+          name: kibana
+          state: started
+          enabled: true
+
+- name: Testando conexão com serviços Kibana
+  hosts: localhost
+  become: no
+  tasks:
+    - name: Conectando ao serviço Kibana
+      uri:
+        url: curl http://k.rgdn.com.br:5601/status

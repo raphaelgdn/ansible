@@ -1,0 +1,89 @@
+---
+- hosts: l
+  become: yes
+  become_user: root
+  tasks:
+
+    #- name: Atualizando /etc/hosts
+    #  shell: |
+    #      echo "192.168.122.31 e1.rgdn.com.br
+    #      192.168.122.32 e2.rgdn.com.br
+    #      192.168.122.33 l1.rgdn.com.br
+    #      192.168.122.34 l2.rgdn.com.br
+    #      192.168.122.35 k.rgdn.com.br
+    #      192.168.122.40 s.rgdn.com.br" >>/tmp/test.txt
+
+    - name: Criando Repositório Elasticsearch 7.x
+      shell: |
+          cat <<EOF | tee /etc/yum.repos.d/elasticsearch.repo
+          [elasticsearch-7.x]
+          name=Elasticsearch repository for 7.x packages
+          baseurl=https://artifacts.elastic.co/packages/7.x/yum
+          gpgcheck=1
+          gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+          enabled=1
+          autorefresh=1
+          type=rpm-md
+          EOF
+
+    - name: Importando chave GPG
+      shell: |
+        rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: Criando Serviço Logstash no Firewall
+      shell: |
+        cat <<EOF | tee /etc/firewalld/services/logstash.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <service>
+        <short>logstash</short>
+        <description>logstash Listener Service</description>
+        <port protocol="tcp" port="5044" />
+        </service>
+        EOF
+
+    - name: Adicionando regra no Firewall
+      firewalld:
+        zone: public
+        service: logstash
+        state: enabled
+        permanent: yes
+
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+
+    - name: instalando dependêcias ( Java | rsync | epel )
+      yum:
+          name: ['java-1.8.0-openjdk', 'rsync', 'epel-release']
+          state: present
+    
+    - name: instalando Logstash
+      yum:
+        name: logstash
+        state: present
+
+    - name: Criando arquivo de configuração Logstash
+      shell: |
+          cat <<EOF | tee /etc/logstash/conf.d/logstash.conf
+          input {
+            beats {
+            port => 5044
+            }
+          }
+          output {
+            elasticsearch {
+              hosts => ["hera1.detran.rj.gov.br:9200", "hera2.detran.rj.gov.br:9200", "hera3.detran.rj.gov.br:9200"]
+              manage_template => false
+              index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+              #user => "elastic"
+              #password => "changeme"
+            }
+          }
+          EOF
+    
+    - name: Iniciando LOGSTASH
+      service:
+          name: logstash
+          state: started
+          enabled: true

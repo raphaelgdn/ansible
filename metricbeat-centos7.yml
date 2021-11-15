@@ -1,0 +1,63 @@
+---
+- hosts: w
+  become: yes
+  become_user: root
+  tasks:
+
+    - name: Atualizando /etc/hosts
+      shell: |
+          echo "192.168.122.31 e1.rgdn.com.br
+          192.168.122.32 e2.rgdn.com.br
+          192.168.122.33 l1.rgdn.com.br
+          192.168.122.34 l2.rgdn.com.br
+          192.168.122.35 k.rgdn.com.br
+          192.168.122.40 s.rgdn.com.br" >>/etc/hosts
+
+    - name: Criando Repositório Elasticsearch 7.x
+      shell: |
+          cat <<EOF | tee /etc/yum.repos.d/elasticsearch.repo
+          [elasticsearch-7.x]
+          name=Elasticsearch repository for 7.x packages
+          baseurl=https://artifacts.elastic.co/packages/7.x/yum
+          gpgcheck=1
+          gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+          enabled=1
+          autorefresh=1
+          type=rpm-md
+          EOF
+
+    - name: Importando chave GPG
+      shell: |
+        rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+    - name: Atualizando pacotes
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Instalando Metricbeat
+      yum:
+        name: metricbeat
+        state: present
+
+    - name: Atualizando as configurações do serviço metricbeat
+      lineinfile:
+        path: /etc/metricbeat/metricbeat.yml
+        regexp: '{{ item.From }}'
+        line: '{{ item.To }}'
+        state: present
+        backup: yes
+      with_items:
+        - { From: '#host: "localhost:5601"', To: '  host: "k.rgdn.com.br:5601"'}
+        - { From: 'hosts: ["localhost:9200"]', To: 'hosts: ["e1.rgdn.com.br:9200", "e2.rgdn.com.br:9200"]'}
+    
+    - name: Configurando Metricbeat aos Serviços Kibana e Elasticsearch
+      shell: |
+          metricbeat modules enable elasticstack elasticstack-xpack
+          metricbeat setup
+
+    - name: Iniciando Serviço Metricbeat
+      service:
+          name: metricbeat
+          state: started
+          enabled: true
