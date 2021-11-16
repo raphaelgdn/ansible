@@ -3,15 +3,8 @@
   hosts: kube-cluster
   become: true
   vars:
-<<<<<<< HEAD
     usr: "ansible"
     pwd: "1"
-=======
-    user: "ansible"
-    password: "password"
-    group: "wheel"
->>>>>>> c334ce2b13d2c8c57324206f82b4c89027de258e
-
   tasks:
     - name: Criando Grupo
       ansible.builtin.group:
