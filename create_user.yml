@@ -1,6 +1,5 @@
 ---
-- name: user module demo
-  hosts: kube-cluster
+- hosts: kube-cluster
   become: true
   vars:
     usr: "ansible"
