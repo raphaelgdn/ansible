@@ -1,0 +1,25 @@
+---
+- hosts: kube-cluster
+  become: true
+  tasks:
+    - name: criando diretórios
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: "1777"
+        state: directory
+      loop:
+        - /kube/nfs
+        - /kube/dados
+        - /kube/dados/mysql
+        - /kube/dados/jenkins
+        - /kube/dados/prometheus/server
+        - /kube/dados/prometheus/alertmanager
+        - /kube/dados/zabbix
+        - /kube/dados/wazuh
+        - /kube/dados/elastic-stack/elasticsearch-master-0
+        - /kube/dados/elastic-stack/elasticsearch-master-1
+        - /kube/dados/elastic-stack/elasticsearch-master-2
+        - /kube/storage
+        - /kube/storage/default
+        - /kube/storage/local
+      
