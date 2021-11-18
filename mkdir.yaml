@@ -15,6 +15,7 @@
         - /kube/dados/prometheus/server
         - /kube/dados/prometheus/alertmanager
         - /kube/dados/zabbix
+        - /kube/dados/wazuh
         - /kube/dados/elastic-stack/elasticsearch-master-0
         - /kube/dados/elastic-stack/elasticsearch-master-1
         - /kube/dados/elastic-stack/elasticsearch-master-2
