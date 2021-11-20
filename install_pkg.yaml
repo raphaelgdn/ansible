@@ -7,7 +7,7 @@
         name: '*'
         state: latest
 
-    - name: instalando pacote ( python 3 )
+    - name: instalando pacote ( python 3 | java-1.8.0-OpenJDK )
       yum:
-          name: ['python3']
+          name: ['python3', 'java-1.8.0-openjdk']
           state: present
