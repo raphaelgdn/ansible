@@ -1,11 +1,11 @@
 [kube-cluster]
-dk-node-01.rgdn.com.br
-dk-node-02.rgdn.com.br
-dk-node-03.rgdn.com.br
+192.168.0.211
+192.168.0.212
+192.168.0.213
 
 [kube-cluster-master]
-dk-node-01.rgdn.com.br
+192.168.0.211
 
 [kube-cluster-nodes]
-dk-node-02.rgdn.com.br
-dk-node-03.rgdn.com.br
+192.168.0.212
+192.168.0.213
