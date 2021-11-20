@@ -1,0 +1,10 @@
+---
+- hosts: kube-cluster
+  become: true
+  tasks:
+    - name: deletando diretorios
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /kube/dados/jenkins
