@@ -1,0 +1,11 @@
+[kube-cluster]
+dk-node-01.rgdn.com.br
+dk-node-02.rgdn.com.br
+dk-node-03.rgdn.com.br
+
+[kube-cluster-master]
+dk-node-01.rgdn.com.br
+
+[kube-cluster-nodes]
+dk-node-02.rgdn.com.br
+dk-node-03.rgdn.com.br
