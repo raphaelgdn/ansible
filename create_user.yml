@@ -25,6 +25,5 @@
         path: /etc/sudoers
         block: |
           {{ item.usuario }} {{ item.nopwd }}
-        marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
       loop:
-        - { usuario: "{{ usr }}", nopwd: ALL=NOPASSWD:ALL }
+        - { usuario: ansible, nopwd: "ALL=NOPASSWD:ALL" }
