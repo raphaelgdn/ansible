@@ -19,3 +19,12 @@
         state: present
         append: yes
         password: "{{ pwd | password_hash('sha512') }}"
+
+    - name: Adicionando Entrada no /etc/sudoers
+      blockinfile:
+        path: /etc/sudoers
+        block: |
+          {{ item.usuario }} {{ item.nopwd }}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item.name }}"
+      loop:
+        - { usuario: "{{ usr }}", nopwd: ALL=NOPASSWD:ALL }
