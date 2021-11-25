@@ -1,6 +1,6 @@
 ---
 - name: Create directory
-- hosts: all
+- hosts: ansible
   become: true
   tasks:
 
