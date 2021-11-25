@@ -4,11 +4,11 @@
   tasks:
     - name: Montando NFS volume
       ansible.posix.mount:
-      src: 192.168.0.24:/
-      path: /mnt
-      opts: rw,sync,hard,intr
-      state: mounted
-      fstype: nfs
+        src: 192.168.0.24:/
+        path: /mnt
+        opts: rw,sync,hard,intr
+        state: mounted
+        fstype: nfs
 
     - name: criando diretórios
       ansible.builtin.file:
