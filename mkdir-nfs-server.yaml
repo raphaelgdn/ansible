@@ -1,6 +1,6 @@
 ---
 - name: Create directory
-- hosts: ansible
+  hosts: ansible
   become: true
   tasks:
     - name: Montando NFS volume
