@@ -34,5 +34,5 @@
 
     - name: Desmontando volume
       ansible.posix.mount:
-      path: /mnt
-      state: unmounted
+        path: /mnt
+        state: unmounted
