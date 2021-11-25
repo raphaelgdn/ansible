@@ -9,6 +9,8 @@
         path: "{{ item }}"
         mode: "1777"
         state: directory
+        owner: nobody
+        group: nobody
       loop:
         - /home/ansible/nfs-server
     
