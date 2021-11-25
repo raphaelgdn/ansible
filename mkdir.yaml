@@ -1,5 +1,5 @@
 ---
-- hosts: kube-cluster
+- hosts: all
   become: true
   tasks:
     - name: Montando NFS volume
