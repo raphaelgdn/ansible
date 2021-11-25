@@ -16,18 +16,21 @@
         mode: "1777"
         state: directory
       loop:
-        - /storage/nfs
-        - /storage
-        - /storage/mysql
-        - /storage/jenkins
-        - /storage/prometheus/server
-        - /storage/prometheus/alertmanager
-        - /storage/zabbix
-        - /storage/wazuh
-        - /storage/PostgreSQL
-        - /storage/elastic-stack/elasticsearch-master-0
-        - /storage/elastic-stack/elasticsearch-master-1
-        - /storage/elastic-stack/elasticsearch-master-2
+        - /mysql
+        - /jenkins
+        - /prometheus/server
+        - /prometheus/alertmanager
+        - /zabbix
+        - /zabbix/zabbix-frontend
+        - /zabbix/zabbix-server
+        - /zabbix/zabbix-PostgreSQL
+        - /zabbix/zabbix-MySQL
+        - /MySQL
+        - /wazuh
+        - /PostgreSQL
+        - /elastic-stack/elasticsearch-master-0
+        - /elastic-stack/elasticsearch-master-1
+        - /elastic-stack/elasticsearch-master-2
 
     - name: Desmontando volume
       ansible.posix.mount:
