@@ -1,0 +1,11 @@
+---
+- hosts: kube-cluster
+  become: true
+  tasks:
+  - name: Mount an NFS volume
+    ansible.posix.mount:
+      src: 192.168.0.24:/
+      path: /storage
+      opts: rw,sync,hard,intr
+      state: mounted
+      fstype: nfs

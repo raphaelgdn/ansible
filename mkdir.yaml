@@ -2,25 +2,34 @@
 - hosts: kube-cluster
   become: true
   tasks:
+    - name: Montando NFS volume
+      ansible.posix.mount:
+      src: 192.168.0.24:/
+      path: /mnt
+      opts: rw,sync,hard,intr
+      state: mounted
+      fstype: nfs
+
     - name: criando diretórios
       ansible.builtin.file:
         path: "{{ item }}"
         mode: "1777"
         state: directory
       loop:
-        - /kube/nfs
-        - /kube/dados
-        - /kube/dados/mysql
-        - /kube/dados/jenkins
-        - /kube/dados/prometheus/server
-        - /kube/dados/prometheus/alertmanager
-        - /kube/dados/zabbix
-        - /kube/dados/wazuh
-        - /kube/dados/PostgreSQL
-        - /kube/dados/elastic-stack/elasticsearch-master-0
-        - /kube/dados/elastic-stack/elasticsearch-master-1
-        - /kube/dados/elastic-stack/elasticsearch-master-2
-        - /kube/storage
-        - /kube/storage/default
-        - /kube/storage/local
-      
+        - /storage/nfs
+        - /storage
+        - /storage/mysql
+        - /storage/jenkins
+        - /storage/prometheus/server
+        - /storage/prometheus/alertmanager
+        - /storage/zabbix
+        - /storage/wazuh
+        - /storage/PostgreSQL
+        - /storage/elastic-stack/elasticsearch-master-0
+        - /storage/elastic-stack/elasticsearch-master-1
+        - /storage/elastic-stack/elasticsearch-master-2
+
+    - name: Desmontando volume
+      ansible.posix.mount:
+      path: /mnt
+      state: unmounted

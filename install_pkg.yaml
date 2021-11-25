@@ -7,7 +7,17 @@
         name: '*'
         state: latest
 
-    - name: instalando pacote ( python 3 | java-1.8.0-OpenJDK )
+    - name: instalando pacote ( python 3 | java-1.8.0-OpenJDK | cockpit)
       yum:
-          name: ['python3', 'java-1.8.0-openjdk']
+          name: ['python3', 'java-1.8.0-openjdk', 'cockpit', 'cockpit-storaged']
           state: present
+
+    - name: Iniciando Serviço Cockpit
+      service:
+          name: cockpit
+          state: started
+          enabled: true
+
+    - name: Verificando porta 9090 aberta
+      shell: |
+          ss -na | grep 9090
