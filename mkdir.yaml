@@ -18,11 +18,11 @@
       ansible.posix.mount:
         src: 192.168.0.24:/
         path: /home/ansible/nfs-server
-        opts: 
-        - rw
-        - sync
-        - hard
-        - intr
+        #opts: 
+        #- rw
+        #- sync
+        #- hard
+        #- intr
         state: mounted
         fstype: nfs
     
