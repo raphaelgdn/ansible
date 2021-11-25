@@ -3,17 +3,17 @@
 - hosts: ansible
   become: true
   tasks:
-    - name: Montando NFS volume
-      ansible.posix.mount:
-        src: 192.168.0.24:/
-        path: /mnt
-        opts: 
-        - rw
-        - sync
-        - hard
-        - intr
-        state: mounted
-        fstype: nfs
+   # - name: Montando NFS volume
+   #   ansible.posix.mount:
+   #     src: 192.168.0.24:/
+   #     path: /mnt
+   #     opts: 
+   #     - rw
+   #     - sync
+   #     - hard
+   #     - intr
+   #     state: mounted
+   #     fstype: nfs
     - name: criando diretórios
       ansible.builtin.file:
         path: "{{ item }}"
@@ -35,7 +35,7 @@
         - /elastic-stack/elasticsearch-master-0
         - /elastic-stack/elasticsearch-master-1
         - /elastic-stack/elasticsearch-master-2
-    - name: Desmontando volume
-      ansible.posix.mount:
-        path: /mnt
-        state: unmounted
+  #  - name: Desmontando volume
+  #    ansible.posix.mount:
+  #      path: /mnt
+  #      state: unmounted
