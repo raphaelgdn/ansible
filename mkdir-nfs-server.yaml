@@ -1,29 +1,20 @@
 ---
 - name: Create directory
-  hosts: all
+  hosts: ansible
   become: true
   tasks:
-
-    - name: Criando Ponto de Montagem
-      ansible.builtin.file:
-        path: "{{ item }}"
-        mode: "1777"
-        state: directory
-        owner: nobody
-        group: nobody
-      loop:
-        - /home/ansible/nfs-server
-    
     - name: Montando NFS volume
       ansible.posix.mount:
         src: 192.168.0.24:/
-        path: /home/ansible/nfs-server
-        opts: rw,sync,hard,intr
-        boot: no
+        path: /mnt
+        opts: 
+        - rw
+        - sync
+        - hard
+        - intr
         state: mounted
         fstype: nfs
-    
-    - name: Criando Diretórios
+    - name: criando diretórios
       ansible.builtin.file:
         path: "{{ item }}"
         mode: "1777"
@@ -44,13 +35,7 @@
         - /elastic-stack/elasticsearch-master-0
         - /elastic-stack/elasticsearch-master-1
         - /elastic-stack/elasticsearch-master-2
-    
     - name: Desmontando volume
       ansible.posix.mount:
         path: /mnt
         state: unmounted
-
-    - name: Removendo Ponto de Montagem
-      ansible.builtin.file:
-        path: /home/ansible/nfs-server
-        state: absent

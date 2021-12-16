@@ -1,11 +1,14 @@
-[kube-cluster]
+[ansible]
+192.168.0.25
+
+[kubecluster]
 192.168.0.211
 192.168.0.212
 192.168.0.213
 
-[kube-cluster-master]
+[kubeclustermaster]
 192.168.0.211
 
-[kube-cluster-nodes]
+[kubeclusternodes]
 192.168.0.212
 192.168.0.213
