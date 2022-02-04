@@ -8,3 +8,10 @@
       yum:
         name: '*'
         state: latest
+        update_cache: yes
+        update_only: yes
+      register: yum_update_status
+
+    - name: Remove packates not needed anymore
+      yum:
+        autoremove: yes
