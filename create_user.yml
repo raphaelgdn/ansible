@@ -12,9 +12,9 @@
     debug:
       var: user_list.list
 
-  - name: extract Username from all dictionaries
+  - name: extract Username from user_list data
     debug:
-    msg: "{{ item.Username }}"
+      msg: "{{ item.Username }}"
     loop: "{{ user_list.list }}"
 
   - name: create users from the csv
