@@ -1,29 +1,30 @@
 ---
-- hosts: kube-cluster
-  become: true
-  vars:
-    usr: "ansible"
-    pwd: "1"
+- name: create users from csv file
+  hosts: all
   tasks:
-    - name: Criando Grupo
-      ansible.builtin.group:
-        name: "{{ usr }}"
-        state: present
+  - name: reading the csv file
+    read_csv:
+      path: username.csv
+      register: user_list
+    delegate_to: localhost
 
-    - name: Criando Usuário
-      ansible.builtin.user:
-        name: "{{ usr }}"
-        comment: "User Automation"
-        group: "{{ usr }}"
-        groups: wheel,docker
-        state: present
-        append: yes
-        password: "{{ pwd | password_hash('sha512') }}"
+  - name: display user_list data
+    debug:
+      var: user_list.list
 
-    - name: Adicionando Entrada no /etc/sudoers
-      blockinfile:
-        path: /etc/sudoers
-        block: |
-          {{ item.usuario }} {{ item.nopwd }}
-      loop:
-        - { usuario: ansible, nopwd: "ALL=NOPASSWD:ALL" }
+  - name: extract Username from all dictionaries
+    debug:
+    msg: "{{ item.Username }}"
+    loop: "{{ user_list.list }}"
+
+  - name: create users from the csv
+    user:
+      name: "{{ item.Username }}"
+      uid: "{{ item.UID }}"
+      groups: "{{ item.Groups }}"
+      append: true
+      password: "{{ item.Password | password_hash('sha512') }}"
+      comment: "{{ item.First_Name }} {{ item.Last_Name }}"
+      state: present
+    loop: "{{ user_list.list }}"
+    become: true
